@@ -1,0 +1,55 @@
+<launch>
+  <!-- Transbot SE RGB-D SLAM using Intel RealSense D435 -->
+  <!-- Run this to BUILD the map. Saves to ~/.ros/rtabmap.db on shutdown. -->
+
+  <arg name="database_path" default="~/.ros/rtabmap.db"/>
+  <arg name="frame_id"      default="base_footprint"/>
+
+  <!-- Static TF: base_footprint -> camera_link -->
+  <node pkg="tf" type="static_transform_publisher" name="base_to_camera"
+        args="0.0484 0 0.10403 0 0 0 /base_footprint /camera_link 30"/>
+
+  <!-- RealSense D435 driver -->
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="align_depth"       value="true"/>
+    <arg name="color_width"       value="640"/>
+    <arg name="color_height"      value="480"/>
+    <arg name="color_fps"         value="30"/>
+    <arg name="depth_width"       value="640"/>
+    <arg name="depth_height"      value="480"/>
+    <arg name="depth_fps"         value="30"/>
+    <arg name="enable_pointcloud" value="false"/>
+  </include>
+
+  <!-- rtabmap in SLAM/mapping mode -->
+  <node pkg="rtabmap_ros" type="rtabmap" name="rtabmap" output="screen" args="">
+    <param name="database_path"       value="$(arg database_path)"/>
+    <param name="frame_id"            value="$(arg frame_id)"/>
+    <param name="odom_frame_id"       value="odom"/>
+    <param name="subscribe_depth"     value="true"/>
+    <param name="subscribe_rgb"       value="true"/>
+    <param name="subscribe_rgbd"      value="false"/>
+    <param name="subscribe_scan"      value="false"/>
+    <param name="approx_sync"         value="true"/>
+
+    <remap from="rgb/image"       to="/camera/color/image_raw"/>
+    <remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+    <remap from="depth/image"     to="/camera/aligned_depth_to_color/image_raw"/>
+    <remap from="odom"            to="/odom"/>
+
+    <param name="Reg/Force3DoF"             value="true"/>
+    <param name="Reg/Strategy"              value="1"/>
+    <param name="Vis/MinInliers"            value="15"/>
+    <param name="Vis/MaxFeatures"           value="600"/>
+    <param name="RGBD/NeighborLinkRefining" value="true"/>
+    <param name="RGBD/ProximityBySpace"     value="true"/>
+    <param name="RGBD/AngularUpdate"        value="0.05"/>
+    <param name="RGBD/LinearUpdate"         value="0.05"/>
+    <param name="Rtabmap/TimeThr"           value="700"/>
+    <param name="Mem/RehearsalSimilarity"   value="0.3"/>
+    <param name="Grid/CellSize"             value="0.05"/>
+    <param name="Grid/RangeMax"             value="3.0"/>
+  </node>
+
+</launch>
+

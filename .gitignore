@@ -1,0 +1,64 @@
+# ??? Python ???
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments ? never commit these, they're regenerable
+detect_env/
+venv/
+env/
+*.egg-info/
+
+# ??? ROS / Catkin build artifacts ???
+build/
+devel/
+install/
+logs/
+.catkin_workspace
+
+# ??? ROS runtime logs ???
+*.log
+.ros/
+
+# ??? Trained models / large binary artifacts ???
+*.pkl
+*.h5
+*.pt
+*.onnx
+models/
+
+# ??? Datasets (usually too large / should be downloaded separately) ???
+dataset/
+*.zip
+*.tar.gz
+
+# ??? Jupyter checkpoints ???
+.ipynb_checkpoints/
+
+# ??? Editor / OS noise ???
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ??? Compiled C++ (if any custom nodes are built) ???
+*.o
+*.so.*
+
+# ??? Vendor/third-party robot packages (uncomment if these aren't your team's own code) ???
+# transbot_bringup/
+# transbot_msgs/
+# transbot_se_moveit_config/
+# transbot_ctrl/
+# transbot_mulity/
+# transbot_mediapipe/
+# transbot_mono/
+# transbot_facetracker/
+# transbot_linefollow/
+# transbot_program/
+# transbot_track/
+# transbot_visual/

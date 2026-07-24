@@ -1,0 +1,20 @@
+<launch>
+    <!-- 设置当前机器人命名空间 -->
+     <!--Sets the current bot namespace-->
+    <arg name="namespace" default="robot0"/>
+     <group ns="$(arg namespace)">
+        <!-- 底层驱动节点 -->
+        <!-- Low-level driver node -->
+        <node pkg="transbot_bringup" type="transbot_driver_show.py" name="transbot_node" required="true" output="screen">
+            <param name="imu" value="/transbot/imu"/>
+            <param name="vel" value="/transbot/get_vel"/>
+            <remap from="/cmd_vel" to="cmd_vel"/>
+            <remap from="/joy" to="joy"/>
+        </node>
+    </group>
+    <!--遥控控制-->
+    <!-- Handle control node -->
+    <!--include file="$(find transbot_ctrl)/launch/transbot_joy_multi.launch">
+                <arg name="namespace" value="$(arg namespace)" />
+    </include-->
+</launch>
