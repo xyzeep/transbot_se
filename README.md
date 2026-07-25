@@ -1,20 +1,18 @@
-# Autonomous Object Detection and Retrieval Using an Ensemble Machine Learning Pipeline on the Yahboom Transbot SE: A Low-Cost Robotic Solution for Nepal’s Emerging Industrial Automation
+# Autonomous Object Detection and Retrieval Using an Ensemble Machine Learning Pipeline on the Yahboom Transbot SE
 
-<p align="center">
-  <img src="images/transbot3.png" alt="Yahboom Transbot SE platform overview" width="720"/>
-</p>
+### A Low-Cost Robotic Solution for Nepal’s Emerging Industrial Automation
 
-<p align="center">
-  <em>Yahboom Transbot SE — tracked mobile base, 3-DOF servo arm, and camera PTZ mount.</em>
-</p>
+**Course:** Machine Learning & Intelligent Agents (combined ML + ROS robotics project)  
+**Institution:** SOFTWARICA COLLEGE OF IT AND E-COMMERCE 
+**Supervisors:** Prof. Shrawan Thakur · Mr. Albert Maharjan  
 
 ---
 
 ## Abstract
 
-This project presents a low-cost autonomous robotic system that **detects**, **approaches**, and **retrieves** an orange ping pong ball using the Yahboom Transbot SE. Perception combines classical computer vision with an ensemble machine-learning confirmation pipeline (SVM + Random Forest + Gradient Boosting on HOG features). Navigation and manipulation are implemented as a ROS Melodic intelligent agent: RGB sensing → perception → visual servoing on `/cmd_vel` → multi-frame confirmation → ordered arm control on `/TargetAngle`.
+This project implements an **autonomous intelligent agent** on the Yahboom Transbot SE that detects an orange ping pong ball, navigates toward it using **visual servoing**, stops at a calibrated image coordinate, and executes a **pick–turn–drop–reset** arm sequence. Perception combines **classical computer vision** (HSV, contour shape, Hough circle confirmation) with a researched **ensemble machine learning pipeline** (HOG features + SVM + Random Forest + Gradient Boosting). Actuation is fully integrated through **ROS 1 Melodic** topics (`/cmd_vel`, `/TargetAngle`).
 
-The work targets practical industrial-automation scenarios in resource-constrained settings (e.g. Nepal), where expensive commercial robots are inaccessible but Raspberry Pi–class platforms and open-source ROS stacks remain viable.
+The system targets **low-cost industrial automation** in resource-constrained environments such as Nepal, where Raspberry Pi–class compute and open-source ROS stacks can substitute for expensive commercial robotics platforms.
 
 ---
 
@@ -23,126 +21,182 @@ The work targets practical industrial-automation scenarios in resource-constrain
 1. [Project Goal](#1-project-goal)
 2. [Team & Contributions](#2-team--contributions)
 3. [Hardware Platform](#3-hardware-platform)
-4. [Software Environment](#4-software-environment)
-5. [System Architecture](#5-system-architecture)
-6. [Intelligent Agent Design](#6-intelligent-agent-design)
-7. [Machine Learning Pipeline](#7-machine-learning-pipeline)
-8. [Computer Vision Detection](#8-computer-vision-detection)
-9. [Depth Sensing Investigation](#9-depth-sensing-investigation)
-10. [Navigation & Visual Servoing](#10-navigation--visual-servoing)
-11. [Arm Pickup Sequence](#11-arm-pickup-sequence)
-12. [ROS Topics & Integration](#12-ros-topics--integration)
-13. [Simulation Attempt](#13-simulation-attempt)
-14. [Repository Structure](#14-repository-structure)
-15. [How to Run](#15-how-to-run)
-16. [Calibration](#16-calibration)
-17. [Results & Known Limitations](#17-results--known-limitations)
-18. [Future Work](#18-future-work)
+4. [Our Physical Build (Photos)](#4-our-physical-build-photos)
+5. [Software Environment](#5-software-environment)
+6. [System Architecture](#6-system-architecture)
+7. [Intelligent Agent Design](#7-intelligent-agent-design)
+8. [Machine Learning Pipeline](#8-machine-learning-pipeline)
+9. [Computer Vision Detection](#9-computer-vision-detection)
+10. [Depth Sensing Investigation](#10-depth-sensing-investigation)
+11. [Navigation & Visual Servoing](#11-navigation--visual-servoing)
+12. [Arm Pickup Sequence](#12-arm-pickup-sequence)
+13. [ROS Topics & Integration](#13-ros-topics--integration)
+14. [Simulation Attempt](#14-simulation-attempt)
+15. [Repository Structure](#15-repository-structure)
+16. [How to Run](#16-how-to-run)
+17. [Calibration](#17-calibration)
+18. [Results & Known Limitations](#18-results--known-limitations)
+19. [Future Work](#19-future-work)
+20. [Acknowledgments](#20-acknowledgments)
 
 ---
 
 ## 1. Project Goal
 
-Detect an orange ping pong ball with the onboard camera, drive the robot toward it while keeping the ball centered in the image, stop at a calibrated grasp pose, then execute a fixed servo sequence to **pick up**, **turn**, **drop**, and **reset**.
+| # | Task | Method |
+|---|------|--------|
+| 1 | **Detect** orange ping pong ball | RealSense RGB + CV pipeline (+ ML ensemble researched) |
+| 2 | **Approach** ball while keeping it centered | Visual servoing → `/cmd_vel` |
+| 3 | **Stop** at grasp pose | Pixel target `(TARGET_X, TARGET_Y)` — not depth |
+| 4 | **Pick up** with arm | Ordered joint sequence → `/TargetAngle` |
+| 5 | **Relocate** ball | Turn 180° → drop → reset arm → turn back |
 
-| Stage | Behavior |
-|-------|----------|
-| Sense | RGB frames from Intel RealSense D435 |
-| Perceive | HSV + circularity (+ optional ML ensemble / Hough confirm) |
-| Act (drive) | Publish `geometry_msgs/Twist` to `/cmd_vel` |
-| Decide | Multi-frame “target reached” confirmation |
-| Act (arm) | Publish `transbot_msgs/Arm` to `/TargetAngle`; pause detection |
+**End state:** Working physical demo on Transbot SE under ROS Melodic (simulation explored but not used for final delivery).
 
 ---
 
 ## 2. Team & Contributions
 
-| Member | Ownership | Documented focus |
-|--------|-----------|------------------|
-| **Pawan** | ROS software environment, integration, control logic | Bringup, Python/ROS bridging, state machine (detect ↔ drive ↔ arm), `/cmd_vel` + `/TargetAngle` wiring |
-| **Pratik** | Arm movement & navigation | Joint sequences, visual-servoing approach/stop, turn–drop–reset maneuvers |
-| **Dikshant** | Machine learning + ping-pong CV | HOG + SVM/RF/GB ensemble, Roboflow dataset, HSV/Hough detection used in production |
-| **Sneha** | Depth sensor (RealSense) | librealsense build, depth sampling/smoothing, why depth was dropped for stopping |
-| **Simon** | Simulation | Gazebo / MoveIt exploration and decision to stay on physical hardware |
-| **Nishan** | Hardware setup | Mechanical mount, cabling, joint ranges, camera servo defaults, power |
+| Member | Role | Documentation focus |
+|--------|------|---------------------|
+| **Pawan Acharya** | ROS software environment, integration, control logic | Bringup, pyenv/venv, ROS node wiring, detect ↔ drive ↔ arm state machine |
+| **Pratik Joshi** | Arm movement & navigation | `/cmd_vel` visual servoing, joint sequences, turn–drop–reset |
+| **Dikshanta Chapagain** | Machine learning + object detection | HOG ensemble training, HSV/Hough production detector, `detect.py` / `coor.py` |
+| **Ishneha Hirachan** | Depth sensor (Intel RealSense D435) | librealsense ARM build, depth sampling, why depth was dropped for stopping |
+| **Simon Rai** | Simulation | Gazebo 9 + MoveIt demo, URDF limits, decision to stay on hardware |
+| **Nishan BK** | Hardware setup | Mechanical mount, cabling, joint ranges, camera servo default, power |
 
 ---
 
 ## 3. Hardware Platform
 
-<p align="center">
-  <img src="images/transbot1.png" alt="Transbot SE top-down hardware view" width="480"/>
-  &nbsp;
-  <img src="images/transbot2.png" alt="Transbot SE front view with RealSense and gripper" width="480"/>
-</p>
+### 3.1 Platform overview (Yahboom Transbot SE)
 
-<p align="center">
-  <em>Left: top-down view (tracks, RealSense mount, 3-DOF arm). Right: front view showing gripper reach and elevated D435.</em>
-</p>
+The diagram below is the **official Yahboom annotated hardware reference** for the Transbot SE. Each callout maps to a subsystem used in this project.
 
-### 3.1 Robot
+![Yahboom Transbot SE — annotated hardware overview](./images/transbot3.png)
 
-| Item | Specification |
-|------|----------------|
-| Platform | **Yahboom Transbot SE** |
-| Drive | Tracked differential drive (520 motors with encoders) |
-| Chassis | Aluminum alloy |
-| Battery | 12 V lithium, 4400 mAh |
-| Compute | **Raspberry Pi 4B** on multi-function expansion board |
-| Arm | **3-DOF bus-servo arm** |
-| Camera mount | 2-DOF PTZ; default PWM servo angle **120°** |
+**Figure 1 — Transbot SE component map** *(source: Yahboom product documentation)*
 
-### 3.2 Arm joints
+| # | Component | Specification | Project use |
+|---|-----------|---------------|-------------|
+| 1 | **ROS main control board** | Raspberry Pi 4B (optional Jetson Nano on other configs) | **Our compute** — runs Ubuntu 18.04, ROS Melodic, detection node |
+| 2 | **2-DOF camera PTZ** | Pan + tilt rotation | Camera mount; default PWM servo angle set to **120°** |
+| 3 | **3-DOF robotic arm** | Intelligent bus servos | Joints **7** (shoulder), **8** (elbow), **9** (gripper) — ball pickup |
+| 4 | **Chassis material** | Aluminum alloy | Lightweight rigid frame for tracks + arm loads |
+| 5 | **Battery pack** | Lithium **12 V, 4400 mAh** | Powers Pi, motors, servos, RealSense |
+| 6 | **Multi-function expansion board** | Yahboom I/O board | Bridges Pi ↔ motors, servos, sensors |
+| 7 | **Track differential drive** | Left/right continuous tracks | Base motion via `/cmd_vel` |
+| 8 | **520 motor + encoder** | Encoded drive motors | Wheel odometry on `/odom` (available; stop logic uses vision) |
 
-| Joint ID | Role | Valid range |
-|----------|------|-------------|
+### 3.2 Arm joint limits
+
+| Joint ID | Name | Valid angle range |
+|----------|------|-------------------|
 | **7** | Shoulder | 0° – 225° |
 | **8** | Elbow | 200° – 270° |
 | **9** | Gripper | 30° – 180° |
 
-### 3.3 Camera
+### 3.3 Vision sensor
 
 | Item | Detail |
 |------|--------|
 | Sensor | **Intel RealSense D435** |
-| Interface | USB 3.0 |
-| Streams used (final) | Color (BGR, 640×480 @ 30 FPS) |
-| Streams explored | Aligned depth (abandoned for stop logic; see §9) |
+| Connection | USB 3.0 |
+| **Production use** | **Color stream only** (640×480 @ 30 FPS) via `pyrealsense2` |
+| **Explored** | Aligned depth stream — abandoned for stop logic (see §10) |
 
-### 3.4 Development machines
+### 3.4 Compute & development
 
 | Machine | Role |
 |---------|------|
-| Raspberry Pi 4B | Runtime: ROS, detection, motor/arm control |
-| MacBook (Apple Silicon) | Model training attempts; hit build failures on old numpy/scipy (pre–Apple Silicon wheels) |
-
-Access: **RealVNC** for remote desktop; **ssh / scp** for file transfer between Pi and Mac.
+| **Raspberry Pi 4B** (on robot) | Runtime: ROS, drivers, detection, arm control |
+| **MacBook** (Apple Silicon) | ML training attempts; old numpy/scipy wheels failed to build |
+| **RealVNC** | Remote desktop into Pi |
+| **ssh / scp** | File transfer Pi ↔ Mac |
 
 ---
 
-## 4. Software Environment
+## 4. Our Physical Build (Photos)
+
+These are **photographs of our actual project robot** — custom RealSense mounting and arm wiring as built for the ping pong demo.
+
+### 4.1 Top-down view
+
+![Our Transbot SE — top-down view showing tracks, RealSense mount, and arm](./images/transbot1.png)
+
+**Figure 2 — Project robot (top view)**
+
+| Visible element | Description |
+|-----------------|-------------|
+| **Tracked base** | Dual continuous rubber tracks (tank-style differential drive) |
+| **RealSense D435** | Silver housing mounted on elevated platform (masking-tape custom mount) |
+| **3-DOF arm** | Metal linkage + black gripper extending forward from chassis |
+| **Internal wiring** | Servo ribbon cables (orange/red/brown) to expansion board |
+| **USB cable** | RealSense USB 3.0 connection to Pi |
+
+### 4.2 Front view
+
+![Our Transbot SE — front view showing gripper reach and elevated camera](./images/transbot2.png)
+
+**Figure 3 — Project robot (front view)**
+
+| Visible element | Description |
+|-----------------|-------------|
+| **Gripper (Joint 9)** | Two-finger end effector, positioned for floor-level pickup |
+| **Arm linkage** | Shoulder + elbow servos with visible power/signal wiring |
+| **Elevated RealSense** | Camera raised above arm for downward field of view toward table/floor |
+| **Track treads** | Black lugged tracks for forward/reverse + in-place rotation |
+
+### 4.3 Build vs. stock platform
+
+| Aspect | Stock Transbot SE (Fig. 1) | Our build (Fig. 2–3) |
+|--------|---------------------------|----------------------|
+| Camera | 2-DOF PTZ mount | **Intel RealSense D435** on custom elevated bracket |
+| Arm | 3-DOF bus servos | Same — tuned joint angles for ping pong grasp |
+| Compute | Pi 4B on expansion board | Same + isolated Python 3.9 for detection |
+
+---
+
+## 5. Software Environment
 
 | Layer | Version / note |
 |-------|----------------|
 | OS | Ubuntu **18.04** (64-bit) |
 | Middleware | **ROS 1 Melodic** |
-| System Python | **3.6.9** (required by Melodic + Transbot_Lib; left untouched) |
-| Detection Python | **3.9.18** via **pyenv**, scoped to the detection project folder |
-| RealSense SDK | **librealsense v2.50.0** built from source (Python 3.6/3.9 bindings; newer SDK required Python ≥ 3.7) |
-| Vision stack | OpenCV, NumPy (venv on 3.9 for compatibility) |
+| System Python | **3.6.9** — required by Melodic + `Transbot_Lib`; **never replaced** |
+| Detection Python | **3.9.18** via **pyenv**, local to `pingpong_detector/` |
+| RealSense SDK | **librealsense v2.50.0** compiled from source on ARM64 |
+| Vision | OpenCV 4.x, NumPy (matched versions in `detect_env` venv) |
 
-### Why two Pythons?
+### 5.1 Why two Python versions?
 
-ROS Melodic and `Transbot_Lib` (egg under Python 3.6) must stay on system Python. Trained models and modern NumPy/OpenCV needed Python ≥ 3.9. Solution: isolate detection under pyenv 3.9 without breaking ROS.
+ROS Melodic and Yahboom's `Transbot_Lib` (Python 3.6 egg) must remain on system Python. Trained ML models and modern NumPy/OpenCV require Python ≥ 3.9. **pyenv** installs 3.9.18 alongside 3.6 without breaking ROS.
 
-### Key library paths
+### 5.2 RealSense build (ARM64)
 
-- Transbot library (runtime): `/usr/local/lib/python3.6/dist-packages/Transbot_Lib-…`
-- Editable source (reinstall after changes): `~/py_install-V3.2.5/py_install/Transbot_Lib/` then `sudo python3 setup.py install`
-- Joint 8 elbow angle formula was fixed in `Transbot_Lib.py`
-- Camera servo default: `self.bot.set_pwm_servo(2, 120)` in `transbot_driver.py`
+Prebuilt `pyrealsense2` pip wheels do not exist for Raspberry Pi ARM. We compiled librealsense **v2.50.0** (last version supporting Python 3.6/3.9) with:
 
-### Main bringup
+```bash
+cmake .. -DBUILD_PYTHON_BINDINGS=bool:true \
+         -DPYTHON_EXECUTABLE=/usr/bin/python3.9 \
+         -DFORCE_RSUSB_BACKEND=true
+make -j2 && sudo make install
+export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python3.9/pyrealsense2
+```
+
+Build time on Pi 4B: ~45–90 minutes.
+
+### 5.3 Transbot library paths
+
+| Path | Purpose |
+|------|---------|
+| `/usr/local/lib/python3.6/dist-packages/Transbot_Lib-…` | Runtime library |
+| `~/py_install-V3.2.5/py_install/Transbot_Lib/` | Editable source |
+| `transbot_driver.py` | Camera servo default: `set_pwm_servo(2, 120)` |
+| `Transbot_Lib.py` | Joint 8 elbow angle formula fix |
+
+### 5.4 ROS bringup
 
 ```bash
 roslaunch transbot_bringup bringup.launch
@@ -150,383 +204,524 @@ roslaunch transbot_bringup bringup.launch
 
 ---
 
-## 5. System Architecture
+## 6. System Architecture
 
-<p align="center">
-  <img src="images/architecture.png" alt="System architecture: sense → perceive → control → decide → arm" width="900"/>
-</p>
+The diagram below is the **project system architecture** — how sensing, perception, control, state logic, and arm actuation connect through ROS.
 
-<p align="center">
-  <em>End-to-end architecture: sensing, perception, visual servoing, state decision, and arm sequence on ROS Melodic.</em>
-</p>
+![System architecture — Transbot SE autonomous ping pong ball pickup robot](./images/architecture.png)
 
-### Pipeline (five stages)
-
-```
-┌─────────────┐    RGB     ┌──────────────────┐   (cx,cy)   ┌─────────────────┐
-│ 1. Sensing  │ ─────────► │ 2. Perception    │ ──────────► │ 3. Visual       │
-│ RealSense   │            │ HSV + shape      │             │ Servoing        │
-│ D435 color  │            │ (+ ML / Hough)   │             │ /cmd_vel        │
-└─────────────┘            │ last-seen grace  │             └────────┬────────┘
-                           │ multi-frame OK   │                      │
-                           └──────────────────┘                      ▼
-                                                    ┌────────────────────────┐
-                                                    │ 4. Target reached?     │
-                                                    │ false → keep tracking  │
-                                                    │ true  → pause detect   │
-                                                    └────────────┬───────────┘
-                                                                 ▼
-                                                    ┌────────────────────────┐
-                                                    │ 5. Arm sequence        │
-                                                    │ /TargetAngle           │
-                                                    │ lower → grip → lift →  │
-                                                    │ turn → drop → reset    │
-                                                    └────────────────────────┘
-```
-
-### Abandoned approaches (documented for honesty)
-
-| Approach | Why abandoned |
-|----------|----------------|
-| ML ensemble as **required** runtime gate | Cross-machine pickle / NumPy / sklearn version hell |
-| Depth-based stop distance | Sparse/noisy IR returns on small glossy balls |
-| Gazebo full-system sim | URDF lacked wheeled-base drive; Pi too weak for Gazebo GUI |
+**Figure 4 — System architecture diagram**
 
 ---
 
-## 6. Intelligent Agent Design
+### 6.1 Stage 1 — Sensing
 
-Framed as a **hybrid intelligent agent** (model-based reflex + finite-state control), not a pure open-loop script.
+| Input | Output |
+|-------|--------|
+| Intel RealSense D435 | RGB frames (640×480 BGR) |
 
-### 6.1 Agent type
-
-| Property | Design choice |
-|----------|----------------|
-| Sensors | RGB camera (primary); depth explored then dropped for stop logic |
-| Effectors | Differential tracks (`/cmd_vel`); 3-DOF arm (`/TargetAngle`) |
-| World model | Ball pixel `(cx, cy)`, last-seen timestamp, reached-frame counter, `arm_active` flag |
-| Control law | Proportional visual servoing on pixel error (hill-climb toward target pixel) |
-| Deliberation | Ordered pickup sequence = fixed task plan (STRIPS-like: approach → center → stop → grasp → relocate → reset) |
-
-### 6.2 State machine
-
-```
-IDLE / SEARCH
-    │ ball detected
-    ▼
-TRACK & SERVO  ◄──── last-seen grace (≤ ~0.5–0.8 s)
-    │ cy ≈ TARGET_Y for N consecutive frames
-    ▼
-CONFIRM REACHED
-    │ stop base; set arm_active = true
-    ▼
-ARM SEQUENCE (detection fully paused)
-    │
-    ▼
-DONE (one-shot; no auto re-hunt)
-```
-
-### 6.3 Knowledge / predicates (informal KR)
-
-Useful facts the controller reasons over:
-
-- `seen(ball, cx, cy, t)`
-- `stale(ball)` if `now − t > LAST_SEEN_TIMEOUT`
-- `centered_x` if `|cx − TARGET_X| ≤ TOLERANCE_X`
-- `in_grasp_zone` if `|cy − TARGET_Y| ≤ TOLERANCE_Y`
-- `confirmed` if `reached_count ≥ REACHED_CONFIRM_FRAMES`
-- `arm_active` ⇒ do not call `find_ball`
-
-Inference example: `confirmed ∧ ¬pickup_done ⇒ stop ∧ arm_active ∧ run_pickup_sequence`.
+- Color stream opened via `pyrealsense2` pipeline
+- Depth stream **not used** in final stop logic
+- Fallback: USB webcam if RealSense unavailable
 
 ---
 
-## 7. Machine Learning Pipeline
+### 6.2 Stage 2 — Perception & detection
 
-*(Primary owner: Dikshant; training support on secondary Mac)*
+| Step | Algorithm |
+|------|-----------|
+| Color filter | HSV threshold (orange ball vs. skin/background) |
+| Shape filter | Contour area + circularity |
+| Confirmation | Grayscale **HoughCircles** (rejects skin-colored blobs) |
+| Optional (research) | HOG + **SVM / RF / GB ensemble** (`detect.py`) |
+| Reliability | **Last-seen grace period** (~0.5–0.8 s) |
+| Arm trigger guard | **Multi-frame confirm** (N consecutive "reached" frames) |
 
-### 7.1 Motivation
+**Output:** Ball pixel coordinates **`(cx, cy)`**
 
-Color alone confuses orange skin and background clutter. An **ensemble** was trained to answer: *“Is this crop a ping pong ball?”*
+---
 
-### 7.2 Dataset
+### 6.3 Stage 3 — Control (visual servoing)
 
-- Source: [Roboflow — Ping Pong Detection](https://universe.roboflow.com/pingpong-ojuhj/ping-pong-detection-0guzq1) (YOLO format)
-- Positives: labeled ball crops  
-- Negatives: random non-ball regions from the same images  
+| Input | Logic | Output |
+|-------|-------|--------|
+| `(cx, cy)` vs. `(TARGET_X, TARGET_Y)` | Proportional pixel-error controller | `geometry_msgs/Twist` |
 
-### 7.3 Features & models
+```
+/cmd_vel  →  Motor driver node  →  PWM  →  Tracked differential drive
+```
 
-| Step | Detail |
+| Error | Action |
+|-------|--------|
+| `cx ≠ TARGET_X` | Turn left/right (`angular.z`) |
+| `cy < TARGET_Y` (ball too high in frame) | Drive forward (`linear.x`) |
+| Both within tolerance | Stop base |
+
+---
+
+### 6.4 Stage 4 — Integration & state
+
+```
+                    ┌─────────────────┐
+                    │ Target reached? │
+                    └────────┬────────┘
+              false          │          true
+                │            │            │
+                ▼            │            ▼
+         Keep tracking       │     Detection PAUSED
+         (Stages 1–3)        │     arm_active = true
+                             │            │
+                             │            ▼
+                             │     Stage 5 (Arm)
+```
+
+**Key rule:** Detection and arm control are **mutually exclusive**. Once the arm takes over, `find_ball()` is never called until the script exits.
+
+---
+
+### 6.5 Stage 5 — Arm control
+
+| Step | Action |
 |------|--------|
-| Preprocess | Resize crop to **64×64** |
-| Features | **HOG** (win 64, block 16, stride 8, cell 8, 9 bins) |
-| Classifiers | **SVM**, **Random Forest**, **Gradient Boosting** |
-| Decision | Average probability + vote count (e.g. ≥ 2/3 votes, confidence threshold) |
-| Artifacts | `models/ensemble_models.pkl`, `models/ensemble_scaler.pkl` |
+| 1 | Move to default / pre-grasp pose |
+| 2 | Lower arm (elbow → shoulder sequence) |
+| 3 | Close gripper (Joint 9) |
+| 4 | Lift arm |
+| 5 | Turn robot ~180° (`/cmd_vel`) |
+| 6 | Drop ball (open gripper) |
+| 7 | Reset to default pose |
+| 8 | Turn ~180° back |
 
-### 7.4 Intended folder layout (training)
+```
+/TargetAngle  →  Arm driver  →  Joints 7, 8, 9
+```
+
+Message format: `transbot_msgs/Arm` containing `Joint[]` with `{id, angle, run_time}`.
+
+---
+
+### 6.6 Hardware layer (powers all stages)
+
+| Component | Role |
+|-----------|------|
+| Raspberry Pi 4B | ROS Melodic master + detection node |
+| Transbot SE base | Tracks + arm + expansion board |
+| 12 V 4400 mAh battery | Power |
+
+---
+
+### 6.7 Approaches explored but not used in final demo
+
+| Approach | Reason abandoned |
+|----------|------------------|
+| **ML ensemble as runtime gate** | Pickle / NumPy / sklearn version mismatch across Mac ↔ Pi |
+| **RealSense depth-based distance** | Sparse IR returns on small glossy ping pong balls |
+| **Gazebo simulation** | URDF lacked wheeled-base plugin; Pi too slow for Gazebo GUI |
+
+These remain documented as **critical evaluation** — valid engineering decisions, not failures.
+
+---
+
+## 7. Intelligent Agent Design
+
+This project is framed as a **hybrid intelligent agent** combining reflex control, a simple world model, and task-level sequencing.
+
+### 7.1 Agent properties
+
+| Property | Implementation |
+|----------|----------------|
+| **Sensors** | RGB camera (RealSense D435 color) |
+| **Effectors** | Differential tracks + 3-DOF arm |
+| **Percepts** | `seen(ball, cx, cy, t)`, mask quality, reached counter |
+| **Actions** | Publish Twist, publish Arm joint lists |
+| **Control** | Model-based reflex (pixel-error minimization) |
+| **Planning** | Fixed ordered pickup script (task-level plan) |
+
+### 7.2 State machine
+
+```
+SEARCH ──detect──► TRACK & SERVO ◄── grace period ──┐
+                        │                           │
+                        │ N frames at target        │ brief miss
+                        ▼                           │
+                   CONFIRM REACHED ──────────────────┘
+                        │
+                        ▼
+                   ARM SEQUENCE (detection off)
+                        │
+                        ▼
+                      DONE
+```
+
+### 7.3 Knowledge representation (informal)
+
+| Predicate | Meaning |
+|-----------|---------|
+| `seen(ball, cx, cy, t)` | Ball detected at time t |
+| `stale(ball)` | `now − t > LAST_SEEN_TIMEOUT` |
+| `centered_x` | `\|cx − TARGET_X\| ≤ TOLERANCE_X` |
+| `in_grasp_zone` | `\|cy − TARGET_Y\| ≤ TOLERANCE_Y` |
+| `confirmed` | `reached_count ≥ REACHED_CONFIRM_FRAMES` |
+| `arm_active` | Detection loop skipped |
+
+**Inference rule:**  
+`confirmed ∧ ¬pickup_done → stop(base) ∧ arm_active ∧ execute(pickup_sequence)`
+
+---
+
+## 8. Machine Learning Pipeline
+
+*(Ishneha Hirachan — depth; Dikshant — ML training & CV)*
+
+### 8.1 Problem
+
+Pure color filtering produces false positives (skin tones, orange objects). An **ensemble classifier** was trained to confirm: *"Is this crop a ping pong ball?"*
+
+### 8.2 Dataset
+
+- **Source:** [Roboflow — Ping Pong Detection](https://universe.roboflow.com/pingpong-ojuhj/ping-pong-detection-0guzq1) (YOLO format)
+- **Positives:** Labeled ball bounding-box crops
+- **Negatives:** Random non-ball regions from same images
+
+### 8.3 Pipeline
+
+| Stage | Detail |
+|-------|--------|
+| Preprocess | Resize crop to **64×64** |
+| Features | **HOG** — win 64, block 16, stride 8, cell 8, 9 bins |
+| Classifiers | **SVM**, **Random Forest**, **Gradient Boosting** |
+| Fusion | Average probability + vote count (≥ 2/3 models agree) |
+| Output | `models/ensemble_models.pkl`, `models/ensemble_scaler.pkl` |
+
+### 8.4 Training layout
 
 ```
 pingpong_detector/
 ├── train.py
-├── detect.py          # CV + ensemble + optional depth
+├── detect.py
 ├── dataset/
-│   ├── train/{images,labels}
-│   └── valid/{images,labels}
+│   ├── train/{images, labels}
+│   └── valid/{images, labels}
 └── models/
     ├── ensemble_models.pkl
     └── ensemble_scaler.pkl
 ```
 
-### 7.5 Cross-platform friction (important lesson)
+### 8.5 Cross-platform deployment challenges
 
-| Issue | Cause | Mitigation explored |
-|-------|--------|---------------------|
-| `numpy._core` pickle errors | Mac NumPy 2.x vs Pi NumPy 1.x | Match versions / pyenv 3.9 on Pi |
-| sklearn install failures on Pi 3.6 | sklearn 1.x needs Python ≥ 3.9 | pyenv 3.9 + matching Mac versions |
-| Apple Silicon build of old NumPy/SciPy | No wheels; `faltivec` compile failures | Windows retrain or drop ML at runtime |
-| OpenCV 5 vs HOG | API / NumPy ABI mismatch | Pin OpenCV 4.x compatible with chosen NumPy |
+| Error | Root cause | Fix attempted |
+|-------|------------|---------------|
+| `No module named 'numpy._core'` | Mac NumPy 2.x pickle on Pi NumPy 1.x | pyenv 3.9 + version match |
+| sklearn 1.6 install fail on Pi | Python 3.6 ceiling (max sklearn 0.24.2) | Separate Python 3.9 env |
+| Apple Silicon `faltivec` build fail | No ARM wheels for numpy 1.19.5 | Windows retrain / drop ML |
+| OpenCV 5 HOG missing | API + NumPy ABI mismatch | Pin opencv-python 4.10 |
 
-### 7.6 Final production choice
+### 8.6 Production decision
 
-Runtime reliability favored **pure CV** (HSV + circularity + grayscale Hough confirm) in `coor.py` / `coor2.py`. The ensemble remains part of the **ML research / agent-perception story** and lives in `detect.py` for comparison and documentation—not as a hard dependency of the demo path.
+**Runtime:** Pure CV in `coor.py` / `coor2.py` (HSV + circularity + Hough).  
+**Research:** Full ensemble pipeline preserved in `detect.py` for ML documentation and comparison.
 
 ---
 
-## 8. Computer Vision Detection
+## 9. Computer Vision Detection
 
 *(Final demo path — Dikshant / Pawan)*
 
-### Pipeline
+### 9.1 HSV tuning (color-picked values)
 
-1. Convert frame BGR → **HSV**
-2. Threshold orange range (tuned from color picker: ball `#dd7818` vs skin tones)  
-   - Example: `LOWER_ORANGE = [10, 170, 100]`, `UPPER_ORANGE = [22, 255, 255]`  
-   - High **saturation** floor rejects skin
-3. Morphology open/close (small elliptical kernel)
-4. Contours: `area ≥ MIN_AREA`, `circularity ≥ MIN_CIRCULARITY`
-5. Second pass: **HoughCircles** on grayscale crop to reject non-round orange blobs
-6. Best candidate → `(cx, cy, radius)`
+| Source | Hex | Notes |
+|--------|-----|-------|
+| Ping pong ball | `#dd7818` | High saturation (~227) |
+| Skin tone 1 | `#815636` | Lower saturation (~148) |
+| Skin tone 2 | `#603e31` | Hue ~8, saturation ~125 |
 
-### Reliability features
+**Tuned range:** `LOWER_ORANGE = [10, 170, 100]`, `UPPER_ORANGE = [22, 255, 255]`  
+Raising the **saturation floor to 170** rejects skin while keeping the ball.
 
-| Mechanism | Purpose |
+### 9.2 Detection steps
+
+1. BGR → HSV → `inRange` mask  
+2. Morphology open/close (5×5 ellipse, 1 iteration)  
+3. Contours: `area ≥ 30`, `circularity ≥ 0.55`  
+4. Top candidates → **HoughCircles** confirmation on grayscale crop  
+5. Return best `(cx, cy, radius)`
+
+### 9.3 Reliability mechanisms
+
+| Feature | Config | Purpose |
+|---------|--------|---------|
+| Last-seen grace | `LAST_SEEN_TIMEOUT = 0.8 s` | Continue on last `(cx, cy)` through brief misses |
+| Reached debounce | `REACHED_CONFIRM_FRAMES = 60` | Prevent single-frame false arm trigger |
+| Mutual exclusion | `arm_active` flag | No detection during arm sequence |
+
+---
+
+## 10. Depth Sensing Investigation
+
+*(Ishneha Hirachan)*
+
+### 10.1 Setup
+
+- librealsense **v2.50.0** compiled from source on ARM64 (no pip wheels)
+- Enabled depth + color streams; aligned depth to color
+- Sampled median depth in window around `(cx, cy)`
+
+### 10.2 Processing attempted
+
+| Technique | Purpose |
 |-----------|---------|
-| **Last-seen grace** (~0.5–0.8 s) | Keep servoing on last `(cx, cy)` through brief misses |
-| **Reached debounce** (many consecutive frames) | Avoid false arm triggers from one noisy frame |
-| **Mutual exclusion** | When `arm_active`, detection loop is skipped entirely |
+| Wider sampling window | More valid depth pixels |
+| Outlier rejection (±5 cm from median) | Remove background contamination |
+| Hole-filling filter | Patch missing depth pixels |
+| Temporal smooth + 1 s hold | Reduce N/A flicker |
+
+### 10.3 Why depth was dropped
+
+Ping pong balls are **small, glossy, and spherical** → sparse/noisy IR returns. Observed behavior: distance flickered (`N/A` ↔ 0.4 m ↔ 0.5 m at the same physical position), causing jerky stop/go on `/cmd_vel`.
+
+### 10.4 Replacement
+
+**Pixel-row visual servoing:** stop when ball center reaches calibrated `TARGET_Y` in the image (camera looks downward at table/floor).
 
 ---
 
-## 9. Depth Sensing Investigation
-
-*(Primary owner: Sneha)*
-
-### What was tried
-
-- Enable RealSense **depth** + align to color  
-- Sample a window around ball center; median + outlier reject + temporal smooth / hold  
-- Stop when `dist_m ≤ TARGET_DIST` (e.g. 0.2–0.3 m)
-
-### Why it failed for ping pong balls
-
-Small, glossy, curved surfaces return **sparse IR**, so depth flickers (`N/A` ↔ 0.4 m ↔ 0.5 m). That caused jerky `/cmd_vel` (drive–stop–drive). Hole-filling helped somewhat but not enough for precise grasp stopping.
-
-### Outcome
-
-Final controller uses **pixel-row visual servoing** (`TARGET_Y`) instead of meters. Depth work remains valuable documentation of sensor limits on this object class.
-
----
-
-## 10. Navigation & Visual Servoing
+## 11. Navigation & Visual Servoing
 
 *(Pratik / Pawan)*
 
-Camera looks slightly downward. Far ball → smaller **y**; near ball → larger **y**.
+Camera mounted with slight downward tilt:
 
-| Signal | Control |
-|--------|---------|
-| `x_error = cx − TARGET_X` | Angular velocity (center horizontally) |
-| `y_error = TARGET_Y − cy` | Linear velocity (approach until grasp row) |
-| Dead zones `TOLERANCE_X/Y` | Prevent chatter |
+| Ball position in frame | Physical meaning |
+|------------------------|------------------|
+| Small **y** (upper frame) | Ball is **far** |
+| Large **y** (lower frame) | Ball is **close** |
 
-```text
-Publish Twist { linear.x, angular.z } → /cmd_vel → /transbot_node (PWM / tracks)
+### Control law (`coor.py`)
+
+```python
+x_error = cx - TARGET_X          # turn to center horizontally
+y_error = TARGET_Y - cy          # drive forward while ball is "too high"
+
+if |x_error| > TOLERANCE_X:  angular.z = -0.004 * x_error
+if |y_error| > TOLERANCE_Y:  linear.x  = 0.005 * y_error
+else:                         linear.x  = 0  → STOP
 ```
 
-Default demo tuning lives in `pingpong_detector/coor.py` (`MAX_LINEAR`, `MAX_ANGULAR`, `TARGET_X/Y`).
+| Parameter | Typical value |
+|-----------|---------------|
+| `TARGET_X` | Frame center + offset (~380) |
+| `TARGET_Y` | ~380 (calibrate per mount) |
+| `TOLERANCE_X/Y` | 15 px |
+| `MAX_LINEAR` | 0.15 m/s |
+| `MAX_ANGULAR` | 0.4 rad/s |
 
 ---
 
-## 11. Arm Pickup Sequence
+## 12. Arm Pickup Sequence
 
-*(Primary owner: Pratik)*
+*(Pratik)*
 
-Messages use **`transbot_msgs/Arm`** containing a list of **`Joint`** `{id, angle, run_time}` so multiple joints can move in one publish.
+### 12.1 ROS message structure
 
-### Example default / grasp angles (tune on hardware)
+```yaml
+# transbot_msgs/Arm
+Joint[] joint
+  int32 id        # 7=shoulder, 8=elbow, 9=gripper
+  int32 run_time  # milliseconds
+  float32 angle   # degrees
+```
 
-| Phase | Joints (id : angle) |
-|-------|---------------------|
-| Default | 9:30, 8:200, 7:60 |
-| Pickup (ordered) | 8:250 → 7:0 → 9:120 → 7:50 |
-| Drop | 8:200 → 9:30 |
-| Reset | back to default |
-| Relocate | in-place ~180° turn via `/cmd_vel`, then reverse turn |
+### 12.2 Calibrated sequence (our robot)
 
-**Critical integration rule:** once the target is confirmed, **stop the base**, set `arm_active`, run the sequence; **do not** keep detecting in parallel.
+| Phase | Command |
+|-------|---------|
+| **Default pose** | J9:30 · J8:200 · J7:60 |
+| **Pickup** | J8:250 → J7:0 → J9:120 → J7:50 |
+| **Turn** | `/cmd_vel` angular ~180° (timed) |
+| **Drop pose** | J8:200 · J9:30 |
+| **Reset** | Return to default |
+| **Turn back** | `/cmd_vel` angular ~180° |
 
-Manual experiment (bringup running, detector stopped):
+**Send multiple joints in one message** — publishing joints separately with `queue_size=1` caused only the last command (gripper) to execute.
+
+### 12.3 Manual testing
 
 ```bash
+# Gripper only
 rostopic pub /TargetAngle transbot_msgs/Arm \
   "{joint: [{id: 9, angle: 90, run_time: 1000}]}" -1
+
+# Shoulder + elbow together
+rostopic pub /TargetAngle transbot_msgs/Arm \
+  "{joint: [{id: 7, angle: 60, run_time: 1000}, {id: 8, angle: 250, run_time: 1000}]}" -1
 ```
 
 ---
 
-## 12. ROS Topics & Integration
+## 13. ROS Topics & Integration
 
-| Topic | Type | Role |
-|-------|------|------|
-| `/cmd_vel` | `geometry_msgs/Twist` | Base motion |
-| `/TargetAngle` | `transbot_msgs/Arm` | Arm joints |
-| `/PWMServo` | (servo msgs) | Camera pan/tilt |
-| `/odom` | odometry | Wheel feedback (available; not required by final stop logic) |
-| `/camera/color/image_raw` | image | RealSense RGB (when using ROS camera stack) |
-| `/camera/aligned_depth_to_color/image_raw` | image | Aligned depth (investigated) |
+| Topic | Message type | Publisher | Subscriber | Role |
+|-------|-------------|-----------|------------|------|
+| `/cmd_vel` | `geometry_msgs/Twist` | `pingpong_coord_detector` | `/transbot_node` | Base motion |
+| `/TargetAngle` | `transbot_msgs/Arm` | detector node | arm driver | Joint control |
+| `/PWMServo` | servo msg | driver | PTZ mount | Camera pan/tilt |
+| `/odom` | odometry | base node | (optional) | Wheel feedback |
+| `/joint_states` | `sensor_msgs/JointState` | robot_state_publisher | RViz | Arm visualization |
+| `/camera/color/image_raw` | image | RealSense node | (optional) | ROS camera stream |
+| `/camera/aligned_depth_to_color/image_raw` | image | RealSense node | (explored) | Aligned depth |
 
-### Runtime graph (conceptual)
+### Integration diagram
 
 ```
-pingpong_coord_detector ──pub──► /cmd_vel ──sub──► transbot_node ──► tracks
-         │
-         └──pub──► /TargetAngle ──sub──► arm driver ──► joints 7/8/9
+┌──────────────────────┐     /cmd_vel      ┌───────────────┐
+│ pingpong_coord_      │ ────────────────► │ transbot_node │──► tracks
+│ detector (coor.py)   │                   └───────────────┘
+│                      │     /TargetAngle  ┌───────────────┐
+│  · find_ball()       │ ────────────────► │ arm driver    │──► joints 7/8/9
+│  · compute_velocity()│                   └───────────────┘
+│  · pickup_sequence() │
+└──────────────────────┘
+         ▲
+         │ RGB frames
+┌────────┴─────────────┐
+│ RealSense D435       │
+│ (pyrealsense2)       │
+└──────────────────────┘
 ```
 
-**Note:** Only one publisher should command `/cmd_vel` during demos (disable joystick `/transbot_joy` if it fights the detector).
+**Safety:** Only one node should publish `/cmd_vel` during demos. Kill `/transbot_joy` if it conflicts.
 
 ---
 
-## 13. Simulation Attempt
+## 14. Simulation Attempt
 
-*(Primary owner: Simon)*
+*(Simon)*
 
-Explored `transbot_se_moveit_config/demo_gazebo.launch` (Gazebo 9 + MoveIt already on the Pi). Findings:
+| Item | Finding |
+|------|---------|
+| Gazebo | **9.0.0** already installed on Pi |
+| MoveIt config | `transbot_se_moveit_config/demo_gazebo.launch` exists |
+| URDF | Arm-only MoveIt model — **no wheeled-base `/cmd_vel` plugin** |
+| Performance | Pi 4B GUI rendering too slow for iteration |
+| Risk | Physical `/transbot_node` responded to `/cmd_vel` while sim was open |
 
-- MoveIt demo is **arm-centric**; URDF effectively lacked a usable wheeled `/cmd_vel` plugin path for this task  
-- Pi 4B struggled with Gazebo GUI FPS  
-- Risk of commanding the **physical** `/transbot_node` if bringup and sim share a master  
+**Decision:** Abandon simulation for deadline; deliver physical demo.
 
-**Decision:** abandon full sim for the deadline; continue physical detect → drive → pick.
+Fix applied during exploration: added missing `execution_type` arg to `transbot_se_description_moveit_controller_manager.launch.xml`.
 
 ---
 
-## 14. Repository Structure
+## 15. Repository Structure
 
 ```
 transbot_se/
 ├── README.md
 ├── images/
-│   ├── architecture.png      # system architecture diagram
-│   ├── transbot1.png         # top-down hardware photo
-│   ├── transbot2.png         # front view (camera + gripper)
-│   └── transbot3.png         # annotated platform overview
-├── pingpong_detector/        # project application code
-│   ├── detect.py             # CV + ML ensemble (+ depth experiments)
-│   ├── detect2.py            # CV / depth iteration
-│   ├── coor.py / coor2.py    # final pixel-target servoing + arm hook
-│   └── new_detect.py         # additional detection variants
-├── transbot_bringup/         # robot bringup, drivers, navigation params
-├── transbot_msgs/            # Arm, Joint, and other custom messages
-├── transbot_se_moveit_config/# MoveIt + Gazebo demo (sim exploration)
-├── transbot_ctrl/            # joystick / keyboard teleop
-└── …                         # stock Yahboom packages (vision, track, etc.)
+│   ├── architecture.png    ← Figure 4: system architecture
+│   ├── transbot3.png       ← Figure 1: Yahboom hardware map
+│   ├── transbot1.png       ← Figure 2: our robot (top view)
+│   └── transbot2.png       ← Figure 3: our robot (front view)
+├── pingpong_detector/
+│   ├── coor.py             ← FINAL: pixel-target servo + arm
+│   ├── coor2.py            ← variant with full pickup sequence
+│   ├── detect.py           ← CV + ML ensemble + depth experiments
+│   ├── detect2.py          ← CV / depth iteration
+│   └── new_detect.py
+├── transbot_bringup/       ← drivers, bringup.launch
+├── transbot_msgs/          ← Arm.msg, Joint.msg
+├── transbot_se_moveit_config/  ← MoveIt + Gazebo (sim exploration)
+└── …                       ← stock Yahboom packages
 ```
 
 ---
 
-## 15. How to Run
+## 16. How to Run
 
-### 15.1 Hardware bringup
+### Step 1 — Connect to Transbot Wi-Fi
+
+ROS requires all nodes on the same network. Verify:
 
 ```bash
-# On Transbot Wi-Fi (ROS_MASTER_URI must match Pi IP)
+hostname -I
+echo $ROS_MASTER_URI   # must match Pi IP, e.g. http://10.x.x.x:11311
+```
+
+### Step 2 — Start robot drivers
+
+```bash
 roslaunch transbot_bringup bringup.launch
 ```
 
-### 15.2 Detection environment (Pi)
+### Step 3 — Activate detection environment
 
 ```bash
-cd ~/transbot_ws/src/pingpong_detector   # or this repo's pingpong_detector
-# activate pyenv 3.9 + venv as configured on the robot, e.g.:
-detectenv   # alias: venv + PYTHONPATH to pyrealsense2 for 3.9
+detectenv   # alias: venv + PYTHONPATH for pyrealsense2 3.9
+cd ~/transbot_ws/src/pingpong_detector
 python3 coor.py
 ```
 
-### 15.3 Optional: ML ensemble path
+### Step 4 — Quit safely
+
+Press **Q** in the OpenCV window → node publishes zero velocity and exits.
+
+### Optional — ML ensemble path
 
 ```bash
-# After models/ is populated and deps match training versions:
-python3 detect.py
+python3 detect.py   # requires models/ and matched library versions
 ```
 
-### 15.4 Quit
+---
 
-Press **Q** in the OpenCV window; the node publishes zero velocity on shutdown.
+## 17. Calibration
+
+| Parameter | Procedure |
+|-----------|-----------|
+| `TARGET_X`, `TARGET_Y` | Place ball at ideal grasp spot; read on-screen `(x,y)`; update config |
+| HSV bounds | Color-pick ball vs. skin; raise lower saturation if skin false-positives |
+| Arm angles | Test with `rostopic pub /TargetAngle …` until grasp is reliable |
+| `LAST_SEEN_TIMEOUT` | Increase for smoother tracking; decrease for faster stop on loss |
+| `REACHED_CONFIRM_FRAMES` | Increase to reduce false pickups; decrease for faster trigger |
+| Turn duration | Tune open-loop 180° spin time empirically |
 
 ---
 
-## 16. Calibration
-
-| Parameter | How to set |
-|-----------|------------|
-| `TARGET_X`, `TARGET_Y` | Place ball at ideal grasp pose; read on-screen `(x, y)`; write into config |
-| HSV orange bounds | Color-pick ball vs skin; raise lower **saturation** to reject skin |
-| Arm angles / `run_time` | `rostopic pub /TargetAngle …` until grasp is reliable |
-| `LAST_SEEN_TIMEOUT` | Longer → smoother through flicker; shorter → safer stop |
-| `REACHED_CONFIRM_FRAMES` | Higher → fewer false pickups; slower trigger |
-
----
-
-## 17. Results & Known Limitations
+## 18. Results & Known Limitations
 
 ### Achieved
 
-- Reliable orange ball detection at near and mid range with CV path  
-- Visual servoing approach + horizontal centering without depth  
-- Debounced stop and mutually exclusive arm takeover  
-- End-to-end physical demo path under ROS Melodic on Pi 4B  
+- End-to-end physical demo: **detect → approach → center → stop → pick → turn → drop → reset**
+- Reliable orange ball detection (near + mid range) without ML runtime dependency
+- Visual servoing without depth sensor for stopping
+- Debounced target confirmation + mutually exclusive arm/detection states
+- ROS Melodic integration on Raspberry Pi 4B
 
 ### Limitations
 
-- Arm angles and `TARGET_Y` remain setup-specific  
-- One-shot: no automatic multi-ball reset loop  
-- ML ensemble not required at runtime due to environment/pickle fragility  
-- Depth unsuitable as sole stop metric for this object  
-- Simulation not production-ready on this Pi + URDF  
+- Arm angles and `TARGET_Y` are setup-specific (need per-robot calibration)
+- One-shot operation — no automatic multi-ball loop
+- ML ensemble not deployed at runtime (environment compatibility)
+- Depth unsuitable for ping pong ball distance on D435
+- Gazebo simulation not production-ready on this hardware
+- Open-loop 180° turns (no odometry feedback)
 
 ---
 
-## 18. Future Work
+## 19. Future Work
 
-1. Calibrate grasp geometry (hand–eye / empirical lookup)  
-2. Multi-ball loop: reset `arm_active` and resume detection  
-3. Containerize matched NumPy/sklearn/OpenCV for portable ensemble inference  
-4. Odometry-closed-loop 180° turns instead of open-loop timing  
-5. Lightweight headless Gazebo or remote sim host for CI-style tests  
-
----
-
-## Citation / Context
-
-**Platform:** Yahboom Transbot SE · Raspberry Pi 4B · Ubuntu 18.04 · ROS Melodic · Intel RealSense D435  
-
-**Theme:** Combining **ensemble machine learning** (perception research track) with **ROS-based intelligent agent control** (sensing, visual servoing, finite-state retrieval) as a **low-cost automation** case study relevant to emerging industrial needs in Nepal.
+1. Hand–eye calibration: map pixel `(cx, cy)` → arm joint angles analytically  
+2. Multi-ball mode: reset `arm_active` and resume detection after drop  
+3. Docker/conda environment for portable ML ensemble inference on Pi  
+4. Odometry-closed-loop turning instead of timed spins  
+5. Remote Gazebo host (Mac/PC) for simulation without Pi GPU bottleneck  
 
 ---
 
-## License & Acknowledgments
+## 20. Acknowledgments
 
-Built on Yahboom Transbot SE ROS packages and Intel RealSense librealsense. Team: Pawan, Pratik, Dikshant, Sneha, Simon, Nishan.
+**Supervisors:** Prof. Shrawan Thakur · Mr. Albert Maharjan  
+
+**Team:** Pawan · Pratik · Dikshant · Ishneha Hirachan · Simon · Nishan  
+
+**Platform & libraries:** Yahboom Transbot SE ROS packages · Intel librealsense · OpenCV · scikit-learn · Roboflow dataset  
+
+**Course context:** Machine Learning & Intelligent Agents — combining ensemble ML perception research with ROS-based autonomous agent control for low-cost robotics in Nepal.
